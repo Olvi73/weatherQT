@@ -7,7 +7,7 @@
 3. 调用天气API接口 - **QUrl** 
 4. 解析返回的天气Json数据 - **QJson相关工具**
 5. 更新UI界面 - **使用`QMap`定位图片、重写`eventFilter`方法**
-6. 绘制温度折线图 - **使用`QPainter``QPen`根据`QLabel`位置定位**
+6. 绘制温度折线图 - **使用`QPainter`和`QPen`根据`QLabel`位置定位**
 7. 回车自动搜索 - **`LineEdit`信号函数`returnPressed()`**
 
 ## 2. 环境
