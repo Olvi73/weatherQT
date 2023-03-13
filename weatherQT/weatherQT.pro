@@ -10,10 +10,12 @@ CONFIG += c++17
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    systrayicon.cpp
 
 HEADERS += \
     mainwindow.h \
+    systrayicon.h \
     weatherdata.h \
     weathertool.h
 

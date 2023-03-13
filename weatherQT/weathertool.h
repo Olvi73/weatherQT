@@ -33,12 +33,10 @@ private:
         }
 
         QJsonArray cities = doc.array();
-        qDebug() << "size:"<<cities.size();
         for(int i=0; i < cities.size(); i++)
         {
             QString city = cities[i].toObject().value("city_name").toString();
             QString code = cities[i].toObject().value("city_code").toString();
-            qDebug() << "test " << city << code;
             if(code.size() > 0)
             {
                 mCityMap.insert(city, code);

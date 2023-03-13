@@ -7,8 +7,11 @@
 #include <QJsonArray>
 #include <QPainter>
 #include <QString>
+#include <QTimer>
+#include <QDesktopServices>
 
 #include "weathertool.h"
+#include "systrayicon.h"
 
 #define INCREMENT 3 //温度升降 像素点增量
 #define POINT_RADIUS 3 //曲线描点的大小
@@ -90,10 +93,18 @@ MainWindow::MainWindow(QWidget *parent)
     mTypeMap.insert("中雪",":/res/type/ZhongXue.png");
     mTypeMap.insert("中雨",":/res/type/ZhongYu.png");
 
+
+    //托盘菜单
+    msysTray = new sysTrayIcon(this);
+
     //请求网络
     mNetAccessManager = new QNetworkAccessManager(this);
     connect(mNetAccessManager, &QNetworkAccessManager::finished, this, &MainWindow::onReplied);
-    //直接在构造中，请求天气数据
+    //直接在构造中，请求天气数据 30min自动刷新一次
+    QTimer *timer = new QTimer();
+    timer->setInterval(1800000);
+    timer->start();
+    connect(timer, SIGNAL(timeout()), this, SLOT(getWeatherInfo("苏州")));
     getWeatherInfo("苏州");
 
     //回车触发按钮
@@ -112,7 +123,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_min_Button_clicked()
 {
     //最小化按钮
-    this->showMinimized();
+    this->hide();
 }
 
 void MainWindow::on_close_Button_clicked()
@@ -141,7 +152,7 @@ void MainWindow::onReplied(QNetworkReply *reply)
     else
     {
         QByteArray byteArr = reply->readAll();
-        qDebug() << "read all:" << byteArr.data();
+        //qDebug() << "read all:" << byteArr.data();
         //解析数据
         parseJson(byteArr);
     }
@@ -151,7 +162,7 @@ void MainWindow::onReplied(QNetworkReply *reply)
 void MainWindow::contextMenuEvent(QContextMenuEvent *event)
 {
     //弹出右键菜单
-    mExitMenu->exec(QCursor::pos());
+    //mExitMenu->exec(QCursor::pos());
     event->accept();
 }
 
@@ -165,10 +176,39 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event)
     this->move(event->globalPos() - mOffset);
 }
 
+void MainWindow::hideEvent(QHideEvent *event)
+{
+    //重写hide事件，隐藏窗口 最小化到托盘
+    if(msysTray->isVisible())
+    {
+        QDateTime currentTime = QDateTime::currentDateTime();
+        if (mLastCloseTime.isNull() || mLastCloseTime.msecsTo(currentTime) > 100) {
+            msysTray->showTrayMessage();
+        }
+        hide();
+        event->ignore();
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    QMessageBox::StandardButton button;
+        button=QMessageBox::warning(this,tr("退出程序"),QString(tr("确认退出程序")),QMessageBox::Yes|QMessageBox::No);
+        if(button==QMessageBox::No)
+        {
+            event->ignore(); // 忽略退出信号，程序继续进行
+        }
+        else if(button==QMessageBox::Yes)
+        {
+            mLastCloseTime = QDateTime::currentDateTime();
+            event->accept();
+        }
+}
+
 void MainWindow::getWeatherInfo(QString cityName)
 {
     QString cityCode = WeatherTool::getCityCode(cityName);
-    qDebug()<<"testcitycode"<<cityCode;
+    //qDebug()<<"testcitycode"<<cityCode;
     QUrl url("http://t.weather.itboy.net/api/weather/city/" + cityCode);
     mNetAccessManager->get(QNetworkRequest(url));
 }
@@ -194,17 +234,15 @@ void MainWindow::parseJson(QByteArray &byteArray)
     mDay[0].week = objYesterday.value("week").toString();
     mDay[0].date = objYesterday.value("ymd").toString();
     mDay[0].type = objYesterday.value("type").toString();
-    qDebug()<<objYesterday.value("high").toString();
+
     QString s;
     s = objYesterday.value("high").toString().split(" ").at(1);
     s = s.left(s.length()-1);
     mDay[0].high = s.toInt();
-    qDebug()<< "high:" + s + objYesterday.value("high").toString();
 
     s = objYesterday.value("low").toString().split(" ").at(1);
     s = s.left(s.length()-1);
     mDay[0].low = s.toInt();
-    qDebug()<< "low:" + s + objYesterday.value("low").toString();
 
     //风向、风力、污染指数
     mDay[0].fx = objYesterday.value("fx").toString();
@@ -258,11 +296,13 @@ void MainWindow::parseJson(QByteArray &byteArray)
 void MainWindow::updateUI()
 {
     // 更新日期和城市
+    QString lblcity = mToday.city;
+    QString lbltype = mToday.type;
+    QString lbltemp = QString::number(mToday.wendu);
     ui->lblDate->setText(QDateTime::fromString(mToday.date, "yyyyMMdd").toString("yyyy/MM/dd") + " " + mDay[1].week);
     ui->lblCity->setText(mToday.city);
 
     // 更新今天
-    qDebug()<<mTypeMap[mToday.type].split(".").at(0)+"128.png";
 //    ui->lblTypeIcon->setPixmap(mTypeMap[mToday.type]);
     ui->lblTypeIcon->setPixmap(mTypeMap[mToday.type].split(".").at(0)+"128.png");
     ui->lblTemp->setText(QString::number(mToday.wendu) + "°");
@@ -274,6 +314,12 @@ void MainWindow::updateUI()
     ui->lblPM25->setText(QString::number(mToday.pm25));
     ui->lblShiDu->setText(mToday.shidu);
     ui->lblQuality->setText(mToday.quality);
+
+    //托盘悬停鼠标时显示信息
+    QDateTime curTime = QDateTime::currentDateTime();
+    QString tip = lblcity + "\n" + lbltype + "\n" + lbltemp + "℃" + "\n" + mToday.fx + " " + mToday.fl + "\n"+ curTime.toString("hh:mm:ss");
+    msysTray->setToolTip(tip);
+    //msysTray->setIcon(QIcon(mTypeMap[mToday.type].split(".").at(0)+"128.png"));
 
     // 更新六天
     ui->lblWeek0->setText("昨天");

@@ -60,5 +60,6 @@
         <file>res/type/BaoYu128.png</file>
         <file>res/type/XiaoYu.png</file>
         <file>res/type/XiaoYu128.png</file>
+        <file>weatherQT.ico</file>
     </qresource>
 </RCC>

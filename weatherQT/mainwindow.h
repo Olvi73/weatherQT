@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "weatherdata.h"
+#include "sysTrayIcon.h"
 #include <QMainWindow>
 #include <QLabel>
 #include <QActionEvent>
@@ -10,6 +11,7 @@
 
 #include <QNetworkAccessManager>  //获取数据网络接口
 #include <QNetworkReply>
+#include <QSystemTrayIcon>
 
 
 QT_BEGIN_NAMESPACE
@@ -28,6 +30,8 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event);
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
+    void hideEvent(QHideEvent* event);
+    void closeEvent(QCloseEvent* event);
 
     //获取天气数据、解析Json 更新UI界面
     void getWeatherInfo(QString cityCode);
@@ -54,7 +58,9 @@ private:
     QAction* mExitAct;  //退出行为 菜单项
     QPoint mOffset; //窗口移动偏移量
     QNetworkAccessManager* mNetAccessManager;
-
+    QSystemTrayIcon *sysTray;  //托盘菜单
+    sysTrayIcon *msysTray;
+    QDateTime mLastCloseTime;  //记录下窗口关闭的时间，然后在hideEvent事件中判断时间差，区分调用的close() hide()事件
     Today mToday;
     Day mDay[6];
 
